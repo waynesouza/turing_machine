@@ -1,112 +1,157 @@
-class Block:
-    """
-    Class that contains the block of TM instructions
-    """
-    RESUME = 0
-    VERBOSE = 1
-    STEP = 2
-    NONE = 3
+import machine
+import sys
 
-    @property
-    def retorne(self):
-        return 0
 
-    @property
-    def pare(self):
-        return 1
+def readFile(filedir):
+    '''Le o arquivo e retorna as linhas'''
 
-    def __init__(self, id, initial_state, instructions):
-        """
-        :param id: block id
-        :param initial_state: block initial state
-        :param instructions: set of instructions in the format {e: {a:task}}
-        """
-        self.id = id
-        self.initial_state = initial_state
-        self.instructions = instructions
-        self.list_blocks = None  # a block will have the addressing of all the others
+    def read():
+        try:
+            fn = open(filedir, "U")
+        except IOError:
+            print(f"error: File '{filedir}' does not appear to exist.")
+            sys.exit()
 
-    def add_block_in_list(self, blocks):
-        self.list_blocks = blocks
+        with fn as f:
+            content = f.readlines()
 
-    def provide_option(self, data):
-        option = input('Provide an option (-r, -v, -s): ').split()
+        content = [x.strip() for x in content]
+        return content
 
-        if '-r' in option:
-            data.change_flag(self.RESUME)
-            data.add_computations(500)
+    '''Se existir comentario os remove'''
 
-        if '-v' in option:
-            data.change_flag(self.VERBOSE)
-            data.add_computations(500)
+    def removeComent(linha):
+        if ";" in linha:
+            index = linha.index(";")
+            if index == 0:
+                return ""
+            else:
+                vet = linha.split(";")
+                return vet[0]
+        else:
+            return linha
 
-        if '-s' in option:
-            try:
-                data.add_computations(int(option[1]))
-            except IndexError:
-                print('Provide an integer after the -s argument')
-                self.provide_option(data)
+    '''Identifica a linha e retorna a MT'''
 
-    def execute_block(self, tape, data):
-        """
-        Execute the block on the shared tape object used by all blocks.
-        :param tape: a tape object
-        :param data: object of data
-        :return: return to the previous block or stop
-        """
-        # go to the initial state
-        state = self.initial_state
-        while True:
-            if data.computations == 0:  # use the prompt to check if we can continue
-                self.provide_option(data)
+    def identify():
+        content = read()
+        bloco = False
+        mt = {}
+        i = 0
+        for c in content:
+            c = removeComent(c)
+            i += 1
+            vet = c.split()
+            if len(vet) > 0:
+                # String maior ou menor que qualquer uma identificada
+                if len(vet) == 2 or len(vet) > 6 or (len(vet) == 1 and "fim" not in vet[0]) or (
+                        len(vet) == 3 and "bloco" not in vet[0] and bloco == False):
+                    print(f"Warning: '{c}' undefined string format. Line [{i}]")
+                if bloco == False and vet[0] == "bloco":
+                    bloco = True
 
-            if data.flag in (self.VERBOSE, self.STEP):
-                format_str = "{:->25}: " + tape.printfita
-                try:
-                    aux_str = ('%s.{:04d}'.format(state) % self.id)
-                except ValueError:
-                    aux_str = ('%s.{:0>4s}'.format(state) % self.id)
-                print(format_str.format(aux_str))
+                    try:
+                        mt[vet[1]] = (int(vet[2]), {})
+                    except Exception as e:
+                        print(f"error: '{vet[2]}' is not a integer. Line [{i}]")
+                        sys.exit()
+                    vetTrans = mt[vet[1]][1]
+                    t = {}
+                    s = {}
 
-            # one computation done
-            data.subcomputations(1)
+                elif vet[0] == "fim":
+                    bloco = False
 
-            if state == 'retorne':
-                return self.retorne
-            if state == 'pare':
-                print('Result: ' + tape.printfita)
-                return self.pare
+                elif bloco is True:
+                    try:
+                        state = int(vet[0])
+                    except Exception as e:
+                        print(f"error: '{vet[0]}' is not a integer. Line [{i}]")
+                        sys.exit()
+                    procname = vet[1]
+                    print(vet)
+                    target = vet[2]
+                    bp = False
 
-            state = int(state)
-            instructions_state = self.id[state]
+                    # Identifica CALL com breakpoint espaçado
+                    if len(vet) == 4 and vet[3] == "!":
+                        bp = True
+                    # Identifica CALL com breakpoint ou não
+                    if len(vet) == 3 or len(vet) == 4:
+                        if "!" in vet[2]:
+                            bp = True
+                            target = target.replace("!", "")
 
-            if isinstance(instructions_state, list):  # movement instruction for some block
-                flag = self.retorne
-                data.call_block(instructions_state[0]).execute_block(tape, data)
+                        if target == "pare":
+                            target = -2
+                        elif target == "retorne":
+                            target = -1
+                        elif target == "*":
+                            target = state
+                        else:
+                            try:
+                                target = int(target)
+                            except Exception as e:
+                                print(f"error: Target '{target}' is not a integer/'retorne'/'pare'. Line [{i}]")
+                                sys.exit()
+                        vetTrans[state] = (0, procname, target, bp)
 
-                if flag == self.pare:
-                    return self.pare
-                state = instructions_state[1]
-                continue
+                    # Identifica Instrução
+                    if len(vet) == 6 or len(vet) == 7:
+                        try:
+                            source = int(vet[0])
+                        except Exception as e:
+                            print(f"error: Source '{target}' is not a integer. Line [{i}]")
+                            sys.exit()
+                        _read = vet[1]
+                        write = vet[3]
+                        target = vet[5]
+                        bp = False
 
-            character = tape.head  # character on the tape
-            break_point = ''
-            try:
-                break_point = instructions_state[character][-1]
-                tape.execute(instructions_state[character][1:3])
-                state = instructions_state[character][3]
-                if '!' == break_point:
-                    print('breakpoint')
-                    self.provide_option(data)
-            except KeyError:
-                try:
-                    break_point = instructions_state['*'][-1]
-                    tape.execute(instructions_state['*'][1:3])
-                    state = instructions_state['*'][3]
-                    if '!' == break_point:
-                        print('breakpoint')
-                        self.provide_option(data)
-                except KeyError:
-                    print('Error in state %s in block %s' % (state, self.id))
-                    print('Character %s not recognized' % character)
-                    exit(-1)
+                        # Tratando caracteres especiais
+                        # "_" = None
+                        if _read == "_":
+                            _read = None
+                        if write == "_":
+                            write = None
+
+                        if source not in vetTrans:
+                            vetTrans[source] = (1, {})
+
+                        # Define a posição
+                        if vet[4] == "i":
+                            pos = 0
+                        elif vet[4] == "e":
+                            pos = -1
+                        elif vet[4] == "d":
+                            pos = 1
+                        # Identifica Ins com Breakpoint Espaçado
+                        if len(vet) == 7 and vet[6] == "!":
+                            bp = True
+                        # Identifica Ins com Breakpoint
+                        elif "!" in vet[5]:
+                            bp = True
+                            target = target.replace("!", "")
+                        # Identifica instrução
+                        else:
+                            bp = False
+
+                        # Target = *
+                        if target == "*":
+                            target = source
+                        elif target == "pare":
+                            target = -2
+                        elif target == "retorne":
+                            target = -1
+                        else:
+                            try:
+                                target = int(target)
+                            except Exception as e:
+                                print(f"error: Target '{target}' is not a integer/'retorne'/'pare'. Line [{i}]")
+                                sys.exit()
+                        trans = (write, pos, target, bp)
+                        vetTrans[source][1][_read] = trans
+
+        return mt
+
+    return identify()
