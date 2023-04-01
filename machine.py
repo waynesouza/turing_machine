@@ -10,11 +10,22 @@ PARE = -2
 
 
 class Machine:
+    """
+    This is a class definition for a machine that has a tape with a current position.
+    The __tape variable is a private class variable that is initially an empty list, representing
+    the tape. The tape_pos variable represents the current position on the tape, initially set to 0.
+    """
     __tape = []
     tape_pos = 0
 
     def __init__(self, procedures, head='()'):
-
+        """
+        This code defines the constructor for a class. The constructor takes two arguments:
+        "procedures" and "head". The "procedures" argument is a parameter that is used to store
+        a list of procedures in the object created by the class. The "head" argument is an optional
+         parameter that specifies the name of the procedure to be executed first when the program
+         starts.:
+        """
         self.procedures = procedures
         self.head = head
 
