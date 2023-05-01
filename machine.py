@@ -1,12 +1,5 @@
-CALL = 0
-TAPE = 1
-
-DIREITA = 1
-IMOVEL = 0
-ESQUERDA = -1
-
-RETORNE = -1
-PARE = -2
+import utils.constants as const
+import utils.errors as error
 
 
 class Machine:
@@ -17,6 +10,7 @@ class Machine:
     """
     __tape = []
     tape_pos = 0
+    stack = []
 
     def __init__(self, procedures, head='()'):
         """
@@ -113,17 +107,17 @@ class Machine:
             steps -= 1
             p, s = self.stack[-1]
             if p not in self.procedures:
-                print(f'error: procedure {p} not defined.')
+                print(error.UNDEFINED_PROCEDURE.format(param=p))
                 return True
-            if s == PARE:
+            if s == const.STOP:
                 return True
             action = self.procedures[p][1][s][0]
             if verbose:
                 self.show_current_state()
-            if action == CALL:
+            if action == const.CALL:
                 p_name = self.procedures[p][1][s][1]
                 if p_name not in self.procedures:
-                    print(f'error: procedure {p_name} not defined.')
+                    print(error.UNDEFINED_PROCEDURE.format(param=p_name))
                     return True
                 p_start = self.procedures[p_name][0]
                 self.stack.append([p_name, p_start])
@@ -133,9 +127,9 @@ class Machine:
             read = self.__tape[self.tape_pos]
             symbols = self.procedures[p][1][s][1]
             if read not in symbols and '*' in symbols:
-                write, go, target, breakpoint = symbols['*']
+                write, go, target, _breakpoint = symbols['*']
             else:
-                write, go, target, breakpoint = symbols.get(read, (None, None, None, None))
+                write, go, target, _breakpoint = symbols.get(read, (None, None, None, None))
             write = write if write != '*' else read
             self.__tape[self.tape_pos] = write
             self.tape_pos += go
@@ -144,7 +138,7 @@ class Machine:
                 self.tape_pos = 0
             elif self.tape_pos == len(self.__tape):
                 self.__tape += [None, ]
-            if target == RETORNE:
+            if target == const.CONST_RETURN:
                 self.stack.pop()
                 if self.stack:
                     p, s = self.stack[-1]
@@ -152,6 +146,6 @@ class Machine:
                 else:
                     break
             self.stack[-1][1] = target
-            if breakpoint:
+            if _breakpoint:
                 return False
         return True
