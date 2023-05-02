@@ -4,6 +4,18 @@ CALL = 0
 CONST_RETURN = -1
 STOP = -2
 
+RIGHT = 'd'
+LEFT = 'e'
+IMMOBILE = 'i'
+BLOCK = 'bloco'
+END = 'fim'
+WILDCARD = '*'
+BREAKPOINT = '!'
+UNDERLINE = '_'
+CONST_RETURN_TEXT = 'retorne'
+CONST_STOP_TEXT = 'pare'
+EMPTY = ''
+
 HELP = '--help'
 HELP_SYMBOL = '-?'
 RESUME = '--resume'

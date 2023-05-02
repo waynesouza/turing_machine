@@ -5,7 +5,7 @@ import sys
 import utils.constants as const
 import utils.messages as message
 import utils.errors as error
-from input import readFile
+from file import read_file
 from machine import Machine
 
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     if verbose:
         print(message.DEFAULT_MESSAGE)
 
-    procedures = readFile(ifile)
+    procedures = read_file(ifile)
     machine = Machine(procedures, head)
 
     if not word:
